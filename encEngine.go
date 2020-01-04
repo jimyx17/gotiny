@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-type encEng func(*Encoder, unsafe.Pointer) //编码器
+type encEng func(*Encoder, unsafe.Pointer) // Encoders
 
 var (
 	rt2encEng = map[reflect.Type]encEng{

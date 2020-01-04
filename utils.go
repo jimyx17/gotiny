@@ -95,11 +95,14 @@ type binInter interface {
 	encoding.BinaryUnmarshaler
 }
 
-// 只应该由指针来实现该接口
+// This interface should only be implemented by pointers
 type GoTinySerializer interface {
-	// 编码方法，将对象的序列化结果append到入参数并返回，方法不应该修改入参数值原有的值
+	// Coding method. Append the serialization result of the object to the input parameter and return.
+	// The method should not modify the value of the input parameter. The original value should only be implemented by the pointer.
 	GotinyEncode([]byte) []byte
-	// 解码方法，将入参解码到对象里并返回使用的长度。方法从入参的第0个字节开始使用，并且不应该修改入参中的任何数据
+	// Encoding method: Append the serialization result of the object to the decoding method, decode the input parameters into the
+	// object and return the length used. The method starts from the 0th byte of the input parameter, and should not modify any
+	// data in the input parameter and return. The method should not modify the value of the input parameter. The original value should only be implemented by the pointer.
 	GotinyDecode([]byte) int
 }
 

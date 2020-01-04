@@ -1,26 +1,40 @@
 package gotiny
 
 import (
+	"errors"
 	"reflect"
 	"unsafe"
 )
 
 type Encoder struct {
-	buf     []byte //编码目的数组
+	buf     []byte // out encode buffer
 	off     int
-	boolPos int  //下一次要设置的bool在buf中的下标,即buf[boolPos]
-	boolBit byte //下一次要设置的bool的buf[boolPos]中的bit位
+	boolPos int  // Next bool pos (buf[boolPos])
+	boolBit byte //N ext bool bit in buf boolpos
 
 	engines []encEng
 	length  int
 }
 
-func Marshal(is ...interface{}) []byte {
-	return NewEncoderWithPtr(is...).Encode(is...)
+func Marshal(is ...interface{}) (out []byte, err error) {
+
+	e, err := NewEncoderWithPtr(is...)
+	if err != nil {
+		return nil, errors.New("could not marshal this")
+	}
+	return e.Encode(is...)
 }
 
-// 创建一个编码ps 指向类型的编码器
-func NewEncoderWithPtr(ps ...interface{}) *Encoder {
+// Creates a new from ps (given that ps is a pointer)
+func NewEncoderWithPtr(ps ...interface{}) (e *Encoder, err error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			e = nil
+			err = errors.New("could not build encoder")
+		}
+	}()
+
 	l := len(ps)
 	engines := make([]encEng, l)
 	for i := 0; i < l; i++ {
@@ -33,11 +47,19 @@ func NewEncoderWithPtr(ps ...interface{}) *Encoder {
 	return &Encoder{
 		length:  l,
 		engines: engines,
-	}
+	}, nil
 }
 
-// 创建一个编码is 类型的编码器
-func NewEncoder(is ...interface{}) *Encoder {
+// Creates a new from is
+func NewEncoder(is ...interface{}) (enc *Encoder, err error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			enc = nil
+			err = errors.New("could not build encoder")
+		}
+	}()
+
 	l := len(is)
 	engines := make([]encEng, l)
 	for i := 0; i < l; i++ {
@@ -46,10 +68,18 @@ func NewEncoder(is ...interface{}) *Encoder {
 	return &Encoder{
 		length:  l,
 		engines: engines,
-	}
+	}, nil
 }
 
-func NewEncoderWithType(ts ...reflect.Type) *Encoder {
+func NewEncoderWithType(ts ...reflect.Type) (enc *Encoder, err error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			enc = nil
+			err = errors.New("could not build encoder")
+		}
+	}()
+
 	l := len(ts)
 	engines := make([]encEng, l)
 	for i := 0; i < l; i++ {
@@ -58,37 +88,60 @@ func NewEncoderWithType(ts ...reflect.Type) *Encoder {
 	return &Encoder{
 		length:  l,
 		engines: engines,
-	}
+	}, nil
 }
 
-// 入参是要编码值的指针
-func (e *Encoder) Encode(is ...interface{}) []byte {
+// Encoder object in bytes (input value must be a pointer)
+func (e *Encoder) Encode(is ...interface{}) (o []byte, err error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			o = nil
+			err = errors.New("could not encode")
+		}
+	}()
+
 	engines := e.engines
 	for i := 0; i < len(engines) && i < len(is); i++ {
 		engines[i](e, (*[2]unsafe.Pointer)(unsafe.Pointer(&is[i]))[1])
 	}
-	return e.reset()
+	return e.reset(), nil
 }
 
-// 入参是要编码的值得unsafe.Pointer 指针
-func (e *Encoder) EncodePtr(ps ...unsafe.Pointer) []byte {
+// Encoder object in bytes (input value must be a pointer of type unsafe.Pointer)
+func (e *Encoder) EncodePtr(ps ...unsafe.Pointer) (o []byte, err error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			o = nil
+			err = errors.New("could not encode")
+		}
+	}()
+
 	engines := e.engines
 	for i := 0; i < len(engines) && i < len(ps); i++ {
 		engines[i](e, ps[i])
 	}
-	return e.reset()
+	return e.reset(), nil
 }
 
-// vs 是持有要编码的值
-func (e *Encoder) EncodeValue(vs ...reflect.Value) []byte {
+// Encode value vs
+func (e *Encoder) EncodeValue(vs ...reflect.Value) (o []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			o = nil
+			err = errors.New("could not encode")
+		}
+	}()
+
 	engines := e.engines
 	for i := 0; i < len(engines) && i < len(vs); i++ {
 		engines[i](e, getUnsafePointer(&vs[i]))
 	}
-	return e.reset()
+	return e.reset(), nil
 }
 
-// 编码产生的数据将append到buf上
+// Sets output buffer for encoder
 func (e *Encoder) AppendTo(buf []byte) {
 	e.off = len(buf)
 	e.buf = buf

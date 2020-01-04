@@ -18,9 +18,9 @@ var (
 
 func init() {
 	t := reflect.TypeOf(value).Elem()
-	e = NewEncoderWithType(t)
-	d = NewDecoderWithType(t)
-	buf = e.Encode(value)
+	e, _ = NewEncoderWithType(t)
+	d, _ = NewDecoderWithType(t)
+	buf, _ = e.Encode(value)
 }
 
 func BenchmarkEncode(b *testing.B) {
@@ -133,7 +133,7 @@ func BenchmarkDecodeUint64(b *testing.B) {
 	var ints = make([][]byte, 10000)
 	for i := 0; i < len(ints); i++ {
 		a := rand.Uint64()
-		ints[i] = Marshal(&a)
+		ints[i], _ = Marshal(&a)
 	}
 	d := Decoder{}
 	b.ResetTimer()

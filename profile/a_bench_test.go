@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/niubaoshu/gotiny"
+	"github.com/jimyx17/gotiny"
 )
 
 type A struct {
@@ -22,7 +22,7 @@ func BenchmarkGotinyMarshal(b *testing.B) {
 	b.StopTimer()
 	data := generate()
 	b.ReportAllocs()
-	e := gotiny.NewEncoder(A{})
+	e, _ := gotiny.NewEncoder(A{})
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		e.Encode(data[rand.Intn(len(data))])

@@ -1,25 +1,37 @@
 package gotiny
 
 import (
+	"errors"
 	"reflect"
 	"unsafe"
 )
 
 type Decoder struct {
 	buf     []byte //buf
-	index   int    //下一个要使用的字节在buf中的下标
-	boolPos byte   //下一次要读取的bool在buf中的下标,即buf[boolPos]
-	boolBit byte   //下一次要读取的bool的buf[boolPos]中的bit位
+	index   int    //Next byte index
+	boolPos byte   // Next bool pos (buf[boolPos])
+	boolBit byte   // Next bool bit in buf boolpos
 
-	engines []decEng //解码器集合
-	length  int      //解码器数量
+	engines []decEng // Decoders
+	length  int      // n of Decoders
 }
 
-func Unmarshal(buf []byte, is ...interface{}) int {
-	return NewDecoderWithPtr(is...).Decode(buf, is...)
+func Unmarshal(buf []byte, is ...interface{}) (ret int, err error) {
+	d, err := NewDecoderWithPtr(is...)
+	if err != nil {
+		return 0, errors.New("could not unmarshal this")
+	}
+	return d.Decode(buf, is...)
 }
 
-func NewDecoderWithPtr(is ...interface{}) *Decoder {
+func NewDecoderWithPtr(is ...interface{}) (dec *Decoder, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			dec = nil
+			err = errors.New("could not decode this")
+		}
+	}()
+
 	l := len(is)
 	engines := make([]decEng, l)
 	for i := 0; i < l; i++ {
@@ -32,10 +44,18 @@ func NewDecoderWithPtr(is ...interface{}) *Decoder {
 	return &Decoder{
 		length:  l,
 		engines: engines,
-	}
+	}, nil
 }
 
-func NewDecoder(is ...interface{}) *Decoder {
+func NewDecoder(is ...interface{}) (dec *Decoder, err error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			dec = nil
+			err = errors.New("could not build decoder")
+		}
+	}()
+
 	l := len(is)
 	engines := make([]decEng, l)
 	for i := 0; i < l; i++ {
@@ -44,10 +64,17 @@ func NewDecoder(is ...interface{}) *Decoder {
 	return &Decoder{
 		length:  l,
 		engines: engines,
-	}
+	}, nil
 }
 
-func NewDecoderWithType(ts ...reflect.Type) *Decoder {
+func NewDecoderWithType(ts ...reflect.Type) (dec *Decoder, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			dec = nil
+			err = errors.New("could not build decoder")
+		}
+	}()
+
 	l := len(ts)
 	des := make([]decEng, l)
 	for i := 0; i < l; i++ {
@@ -56,7 +83,7 @@ func NewDecoderWithType(ts ...reflect.Type) *Decoder {
 	return &Decoder{
 		length:  l,
 		engines: des,
-	}
+	}, nil
 }
 
 func (d *Decoder) reset() int {
@@ -68,30 +95,54 @@ func (d *Decoder) reset() int {
 }
 
 // is is pointer of variable
-func (d *Decoder) Decode(buf []byte, is ...interface{}) int {
+func (d *Decoder) Decode(buf []byte, is ...interface{}) (o int, err error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			o = 0
+			err = errors.New("could not decode")
+		}
+	}()
+
 	d.buf = buf
 	engines := d.engines
 	for i := 0; i < len(engines) && i < len(is); i++ {
 		engines[i](d, (*[2]unsafe.Pointer)(unsafe.Pointer(&is[i]))[1])
 	}
-	return d.reset()
+	return d.reset(), nil
 }
 
 // ps is a unsafe.Pointer of the variable
-func (d *Decoder) DecodePtr(buf []byte, ps ...unsafe.Pointer) int {
+func (d *Decoder) DecodePtr(buf []byte, ps ...unsafe.Pointer) (o int, err error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			o = 0
+			err = errors.New("could not decode")
+		}
+	}()
+
 	d.buf = buf
 	engines := d.engines
 	for i := 0; i < len(engines) && i < len(ps); i++ {
 		engines[i](d, ps[i])
 	}
-	return d.reset()
+	return d.reset(), nil
 }
 
-func (d *Decoder) DecodeValue(buf []byte, vs ...reflect.Value) int {
+func (d *Decoder) DecodeValue(buf []byte, vs ...reflect.Value) (o int, err error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			o = 0
+			err = errors.New("could not decode")
+		}
+	}()
+
 	d.buf = buf
 	engines := d.engines
 	for i := 0; i < len(engines) && i < len(vs); i++ {
 		engines[i](d, unsafe.Pointer(vs[i].UnsafeAddr()))
 	}
-	return d.reset()
+	return d.reset(), nil
 }

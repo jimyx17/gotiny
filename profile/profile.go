@@ -9,7 +9,7 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/niubaoshu/gotiny"
+	"github.com/jimyx17/gotiny"
 	"github.com/niubaoshu/goutils"
 )
 
@@ -50,10 +50,10 @@ var (
 	vs       = []interface{}{
 		ptrint,
 		strs,
-		`习近平离京对瑞士联邦进行国事访问
-		出席世界经济论坛2017年年会并访问在瑞士的国际组织
-		新华社北京1月15日电1月15日上午，国家主席习近平乘专机离开北京，应以洛伊特哈德为主席的瑞士联邦委员会邀请，对瑞士进行国事访问；应世界经济论坛创始人兼执行主席施瓦布邀请，出席在达沃斯举行的世界经济论坛2017年年会；应联合国秘书长古特雷斯、世界卫生组织总干事陈冯富珍、国际奥林匹克委员会主席巴赫邀请，访问联合国日内瓦总部、世界卫生组织、国际奥林匹克委员会。
-		陪同习近平出访的有：习近平主席夫人彭丽媛，中共中央政治局委员、中央政策研究室主任王沪宁，中共中央政治局委员、中央书记处书记、中央办公厅主任栗战书，国务委员杨洁篪等。返回腾讯网首页>>`,
+		`Xi Jinping leaves Beijing for state visit to Swiss Federation
+		Attend World Economic Forum Annual Meeting 2017 and visit international organizations in Switzerland
+		Xinhua News Agency, Beijing, January 15th. On the morning of January 15th, President Xi Jinping left Beijing on a special plane. He was invited to the Swiss Federal Council chaired by Leuthard and paid a state visit to Switzerland. Executive Chairman Schwab invited to attend the 2017 World Economic Forum Annual Meeting in Davos; visited the UN headquarters in Geneva at the invitation of UN Secretary-General Guterres, Director-General of the World Health Organization Chen Feng Fuzhen and President of the International Olympic Committee Bach , World Health Organization, International Olympic Committee.
+		Accompanying Xi Jinping are: Peng Liyuan, wife of President Xi Jinping, Wang Huning, member of the Political Bureau of the CPC Central Committee and director of the Central Policy Research Office, Li Zhanshu, member of the Political Bureau of the CPC Central Committee, secretary of the Central Secretariat, director of the Central Office, and state councilor Yang Jiechi. Back to Tencent Home >>`,
 		true,
 		false,
 		int(123456),
@@ -75,18 +75,18 @@ var (
 		float64(1.2345678),
 		complex64(1.2345 + 2.3456i),
 		complex128(1.2345678 + 2.3456789i),
-		string("hello,日本国"),
+		string("hello, Japan"),
 		string("9b899bec35bc6bb8"),
 		inta,
 		[][][][3][][3]int{{{{{{2, 3}}}}}},
 		map[int]map[int]map[int]map[int]map[int]map[int]map[int]map[int]int{1: {1: {1: {1: {1: {1: {1: {1: 2}}}}}}}},
 		map[int]map[int]int{1: {2: 3}},
 		[][]bool{},
-		[]byte("hello，中国人"),
+		[]byte("hello，Chinese"),
 		[][]byte{[]byte("hello"), []byte("world")},
-		[4]string{"2324", "23423", "捉鬼", "《：LSESERsef色粉色问问我二维牛"},
+		[4]string{"2324", "23423", "Buffy", "《：LSESERsef pink ask me 2D cow"},
 		map[int]string{1: "h", 2: "h", 3: "nihao"},
-		map[string]map[int]string{"werwer": {1: "呼呼喊喊"}, "汉字": {2: "世界"}},
+		map[string]map[int]string{"werwer": {1: "Shout"}, "Char": {2: "world"}},
 		a,
 		i,
 		&i,
@@ -109,8 +109,8 @@ var (
 		slice,
 		mapt,
 	}
-	e = gotiny.NewEncoder(vs...)
-	d = gotiny.NewDecoder(vs...)
+	e, _ = gotiny.NewEncoder(vs...)
+	d, _ = gotiny.NewDecoder(vs...)
 
 	spvals = make([]interface{}, len(vs))
 	rpvals = make([]interface{}, len(vs))
@@ -152,7 +152,8 @@ func main() {
 	for i := 0; i < 1000; i++ {
 		for i := 0; i < 1000; i++ {
 			e.AppendTo(buf[:0])
-			d.Decode(e.Encode(spvals...), rpvals...)
+			t, _ := e.Encode(spvals...)
+			d.Decode(t, rpvals...)
 			for i, result := range rpvals {
 				r := reflect.ValueOf(result).Elem().Interface()
 				if Assert(vs[i], r) != nil {

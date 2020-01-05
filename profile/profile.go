@@ -109,8 +109,8 @@ var (
 		slice,
 		mapt,
 	}
-	e, _ = gotiny.NewEncoder(vs...)
-	d, _ = gotiny.NewDecoder(vs...)
+	e = gotiny.NewEncoder(vs...)
+	d = gotiny.NewDecoder(vs...)
 
 	spvals = make([]interface{}, len(vs))
 	rpvals = make([]interface{}, len(vs))
@@ -152,7 +152,7 @@ func main() {
 	for i := 0; i < 1000; i++ {
 		for i := 0; i < 1000; i++ {
 			e.AppendTo(buf[:0])
-			t, _ := e.Encode(spvals...)
+			t := e.Encode(spvals...)
 			d.Decode(t, rpvals...)
 			for i, result := range rpvals {
 				r := reflect.ValueOf(result).Elem().Interface()

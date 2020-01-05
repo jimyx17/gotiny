@@ -3,6 +3,7 @@ package gotiny
 import (
 	"encoding"
 	"encoding/gob"
+	"errors"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -103,7 +104,7 @@ type GoTinySerializer interface {
 	// Encoding method: Append the serialization result of the object to the decoding method, decode the input parameters into the
 	// object and return the length used. The method starts from the 0th byte of the input parameter, and should not modify any
 	// data in the input parameter and return. The method should not modify the value of the input parameter. The original value should only be implemented by the pointer.
-	GotinyDecode([]byte) int
+	GotinyDecode([]byte) (int, error)
 }
 
 func implementOtherSerializer(rt reflect.Type) (encEng encEng, decEng decEng) {
@@ -112,8 +113,10 @@ func implementOtherSerializer(rt reflect.Type) (encEng encEng, decEng decEng) {
 		encEng = func(e *Encoder, p unsafe.Pointer) {
 			e.buf = reflect.NewAt(rt, p).Interface().(GoTinySerializer).GotinyEncode(e.buf)
 		}
-		decEng = func(d *Decoder, p unsafe.Pointer) {
-			d.index += reflect.NewAt(rt, p).Interface().(GoTinySerializer).GotinyDecode(d.buf[d.index:])
+		decEng = func(d *Decoder, p unsafe.Pointer) error {
+			n, err := reflect.NewAt(rt, p).Interface().(GoTinySerializer).GotinyDecode(d.buf[d.index:])
+			d.index += n
+			return err
 		}
 		return
 	}
@@ -128,13 +131,21 @@ func implementOtherSerializer(rt reflect.Type) (encEng encEng, decEng decEng) {
 			e.buf = append(e.buf, buf...)
 		}
 
-		decEng = func(d *Decoder, p unsafe.Pointer) {
-			length := d.decLength()
+		decEng = func(d *Decoder, p unsafe.Pointer) error {
+			var length int
+			if err := d.decLength(&length); err != nil {
+				return err
+			}
+
 			start := d.index
 			d.index += length
-			if err := reflect.NewAt(rt, p).Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary(d.buf[start:d.index]); err != nil {
-				panic(err)
+			if len(d.buf) < d.index {
+				return errors.New("not eonugh data to deserialize")
 			}
+			if err := reflect.NewAt(rt, p).Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary(d.buf[start:d.index]); err != nil {
+				return err
+			}
+			return nil
 		}
 		return
 	}
@@ -143,18 +154,26 @@ func implementOtherSerializer(rt reflect.Type) (encEng encEng, decEng decEng) {
 		encEng = func(e *Encoder, p unsafe.Pointer) {
 			buf, err := reflect.NewAt(rt, p).Interface().(gob.GobEncoder).GobEncode()
 			if err != nil {
-				panic(err)
+				panic(err) // this is the only case where encoding fails... should we panic???? In which cases this "fails"
 			}
 			e.encLength(len(buf))
 			e.buf = append(e.buf, buf...)
 		}
-		decEng = func(d *Decoder, p unsafe.Pointer) {
-			length := d.decLength()
+		decEng = func(d *Decoder, p unsafe.Pointer) error {
+			var length int
+			if err := d.decLength(&length); err != nil {
+				return err
+			}
+
+			if len(d.buf) <= d.index {
+				return errors.New("not eonugh data to deserialize")
+			}
 			start := d.index
 			d.index += length
 			if err := reflect.NewAt(rt, p).Interface().(gob.GobDecoder).GobDecode(d.buf[start:d.index]); err != nil {
-				panic(err)
+				return err
 			}
+			return nil
 		}
 	}
 	return

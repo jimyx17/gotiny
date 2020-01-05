@@ -1,13 +1,14 @@
 package gotiny
 
 import (
+	"errors"
 	"reflect"
 	"sync"
 	"time"
 	"unsafe"
 )
 
-type decEng func(*Decoder, unsafe.Pointer) // Decoder
+type decEng func(*Decoder, unsafe.Pointer) error // Decoder
 
 var (
 	rt2decEng = map[reflect.Type]decEng{
@@ -72,17 +73,17 @@ func getDecEngine(rt reflect.Type) decEng {
 	return engine
 }
 
-func buildDecEngine(rt reflect.Type, engPtr *decEng) {
+func buildDecEngine(rt reflect.Type, engPtr *decEng) error {
 	engine, has := rt2decEng[rt]
 	if has {
 		*engPtr = engine
-		return
+		return nil
 	}
 
 	if _, engine = implementOtherSerializer(rt); engine != nil {
 		rt2decEng[rt] = engine
 		*engPtr = engine
-		return
+		return nil
 	}
 
 	kind := rt.Kind()
@@ -91,44 +92,68 @@ func buildDecEngine(rt reflect.Type, engPtr *decEng) {
 	case reflect.Ptr:
 		et := rt.Elem()
 		defer buildDecEngine(et, &eEng)
-		engine = func(d *Decoder, p unsafe.Pointer) {
-			if d.decIsNotNil() {
+		engine = func(d *Decoder, p unsafe.Pointer) error {
+			var ut bool
+			if err := d.decIsNotNil(&ut); err != nil {
+				return err
+			}
+
+			if ut {
 				if isNil(p) {
 					*(*unsafe.Pointer)(p) = unsafe.Pointer(reflect.New(et).Elem().UnsafeAddr())
 				}
-				eEng(d, *(*unsafe.Pointer)(p))
+				if err := eEng(d, *(*unsafe.Pointer)(p)); err != nil {
+					return err
+				}
+
 			} else if !isNil(p) {
 				*(*unsafe.Pointer)(p) = nil
 			}
+			return nil
 		}
 	case reflect.Array:
 		l, et := rt.Len(), rt.Elem()
 		size := et.Size()
 		defer buildDecEngine(et, &eEng)
-		engine = func(d *Decoder, p unsafe.Pointer) {
+		engine = func(d *Decoder, p unsafe.Pointer) error {
 			for i := 0; i < l; i++ {
-				eEng(d, unsafe.Pointer(uintptr(p)+uintptr(i)*size))
+				if err := eEng(d, unsafe.Pointer(uintptr(p)+uintptr(i)*size)); err != nil {
+					return err
+				}
 			}
+			return nil
 		}
 	case reflect.Slice:
 		et := rt.Elem()
 		size := et.Size()
 		defer buildDecEngine(et, &eEng)
-		engine = func(d *Decoder, p unsafe.Pointer) {
+		engine = func(d *Decoder, p unsafe.Pointer) error {
+			var ut bool
 			header := (*reflect.SliceHeader)(p)
-			if d.decIsNotNil() {
-				l := d.decLength()
+			if err := d.decIsNotNil(&ut); err != nil {
+				return err
+			}
+
+			if ut {
+				var l int
+				if err := d.decLength(&l); err != nil {
+					return err
+				}
+
 				if isNil(p) || header.Cap < l {
 					*header = reflect.SliceHeader{Data: reflect.MakeSlice(rt, l, l).Pointer(), Len: l, Cap: l}
 				} else {
 					header.Len = l
 				}
 				for i := 0; i < l; i++ {
-					eEng(d, unsafe.Pointer(header.Data+uintptr(i)*size))
+					if err := eEng(d, unsafe.Pointer(header.Data+uintptr(i)*size)); err != nil {
+						return err
+					}
 				}
 			} else if !isNil(p) {
 				*header = reflect.SliceHeader{}
 			}
+			return nil
 		}
 	case reflect.Map:
 		kt, vt := rt.Key(), rt.Elem()
@@ -136,9 +161,18 @@ func buildDecEngine(rt reflect.Type, engPtr *decEng) {
 		var kEng, vEng decEng
 		defer buildDecEngine(kt, &kEng)
 		defer buildDecEngine(vt, &vEng)
-		engine = func(d *Decoder, p unsafe.Pointer) {
-			if d.decIsNotNil() {
-				l := d.decLength()
+		engine = func(d *Decoder, p unsafe.Pointer) error {
+			var ut bool
+			if err := d.decIsNotNil(&ut); err != nil {
+				return err
+			}
+
+			if ut {
+				var l int
+				if err := d.decLength(&l); err != nil {
+					return err
+				}
+
 				var v reflect.Value
 				if isNil(p) {
 					v = reflect.MakeMapWithSize(rt, l)
@@ -149,13 +183,18 @@ func buildDecEngine(rt reflect.Type, engPtr *decEng) {
 				keys, vals := reflect.MakeSlice(skt, l, l), reflect.MakeSlice(svt, l, l)
 				for i := 0; i < l; i++ {
 					key, val := keys.Index(i), vals.Index(i)
-					kEng(d, unsafe.Pointer(key.UnsafeAddr()))
-					vEng(d, unsafe.Pointer(val.UnsafeAddr()))
+					if err := kEng(d, unsafe.Pointer(key.UnsafeAddr())); err != nil {
+						return err
+					}
+					if err := vEng(d, unsafe.Pointer(val.UnsafeAddr())); err != nil {
+						return err
+					}
 					v.SetMapIndex(key, val)
 				}
 			} else if !isNil(p) {
 				*(*unsafe.Pointer)(p) = nil
 			}
+			return nil
 		}
 	case reflect.Struct:
 		fields, offs := getFieldType(rt, 0)
@@ -166,20 +205,32 @@ func buildDecEngine(rt reflect.Type, engPtr *decEng) {
 				buildDecEngine(fields[i], &fEngines[i])
 			}
 		}()
-		engine = func(d *Decoder, p unsafe.Pointer) {
+		engine = func(d *Decoder, p unsafe.Pointer) error {
 			for i := 0; i < len(fEngines) && i < len(offs); i++ {
-				fEngines[i](d, unsafe.Pointer(uintptr(p)+offs[i]))
+				if err := fEngines[i](d, unsafe.Pointer(uintptr(p)+offs[i])); err != nil {
+					return err
+				}
 			}
+			return nil
 		}
 	case reflect.Interface:
-		engine = func(d *Decoder, p unsafe.Pointer) {
-			if d.decIsNotNil() {
+		engine = func(d *Decoder, p unsafe.Pointer) error {
+			var ut bool
+			if err := d.decIsNotNil(&ut); err != nil {
+				return err
+			}
+
+			if ut {
 				name := ""
-				decString(d, unsafe.Pointer(&name))
+				if err := decString(d, unsafe.Pointer(&name)); err != nil {
+					return err
+				}
+
 				et, has := name2type[name]
 				if !has {
-					panic("unknown typ:" + name)
+					return errors.New("unknown typ:" + name)
 				}
+
 				v := reflect.NewAt(rt, p).Elem()
 				var ev reflect.Value
 				if v.IsNil() || v.Elem().Type() != et {
@@ -187,17 +238,22 @@ func buildDecEngine(rt reflect.Type, engPtr *decEng) {
 				} else {
 					ev = v.Elem()
 				}
-				getDecEngine(et)(d, getUnsafePointer(&ev))
+				if err := getDecEngine(et)(d, getUnsafePointer(&ev)); err != nil {
+					return err
+				}
+
 				v.Set(ev)
 			} else if !isNil(p) {
 				*(*unsafe.Pointer)(p) = nil
 			}
+			return nil
 		}
 	case reflect.Chan, reflect.Func:
-		panic("not support " + rt.String() + " type")
+		return errors.New("not support " + rt.String() + " type")
 	default:
 		engine = baseDecEngines[kind]
 	}
 	rt2decEng[rt] = engine
 	*engPtr = engine
+	return nil
 }

@@ -18,9 +18,9 @@ var (
 
 func init() {
 	t := reflect.TypeOf(value).Elem()
-	e, _ = NewEncoderWithType(t)
-	d, _ = NewDecoderWithType(t)
-	buf, _ = e.Encode(value)
+	e = NewEncoderWithType(t)
+	d = NewDecoderWithType(t)
+	buf = e.Encode(value)
 }
 
 func BenchmarkEncode(b *testing.B) {
@@ -130,6 +130,7 @@ func GetRandomString(l int) string {
 }
 
 func BenchmarkDecodeUint64(b *testing.B) {
+	var ut uint64
 	var ints = make([][]byte, 10000)
 	for i := 0; i < len(ints); i++ {
 		a := rand.Uint64()
@@ -140,7 +141,7 @@ func BenchmarkDecodeUint64(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		d.buf = ints[rand.Intn(10000)]
 		d.index = 0
-		d.decUint64()
+		d.decUint64(&ut)
 	}
 }
 
@@ -164,6 +165,7 @@ func BenchmarkEncodeBool(b *testing.B) {
 }
 
 func BenchmarkDecodeBool(b *testing.B) {
+	var ut bool
 	l := 2000
 	var ints = make([][]byte, 10000)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -180,7 +182,7 @@ func BenchmarkDecodeBool(b *testing.B) {
 		d.boolPos = 0
 		d.index = 0
 		for j := 0; j < l*8; j++ {
-			d.decBool()
+			d.decBool(&ut)
 		}
 	}
 }

@@ -22,25 +22,18 @@ func Marshal(is ...interface{}) (out []byte, err error) {
 	if err != nil {
 		return nil, errors.New("could not marshal this")
 	}
-	return e.Encode(is...)
+	return e.Encode(is...), nil
 }
 
 // Creates a new from ps (given that ps is a pointer)
 func NewEncoderWithPtr(ps ...interface{}) (e *Encoder, err error) {
-
-	defer func() {
-		if r := recover(); r != nil {
-			e = nil
-			err = errors.New("could not build encoder")
-		}
-	}()
 
 	l := len(ps)
 	engines := make([]encEng, l)
 	for i := 0; i < l; i++ {
 		rt := reflect.TypeOf(ps[i])
 		if rt.Kind() != reflect.Ptr {
-			panic("must a pointer type!")
+			return nil, errors.New("must a pointer type!")
 		}
 		engines[i] = getEncEngine(rt.Elem())
 	}
@@ -51,14 +44,7 @@ func NewEncoderWithPtr(ps ...interface{}) (e *Encoder, err error) {
 }
 
 // Creates a new from is
-func NewEncoder(is ...interface{}) (enc *Encoder, err error) {
-
-	defer func() {
-		if r := recover(); r != nil {
-			enc = nil
-			err = errors.New("could not build encoder")
-		}
-	}()
+func NewEncoder(is ...interface{}) *Encoder {
 
 	l := len(is)
 	engines := make([]encEng, l)
@@ -68,18 +54,10 @@ func NewEncoder(is ...interface{}) (enc *Encoder, err error) {
 	return &Encoder{
 		length:  l,
 		engines: engines,
-	}, nil
+	}
 }
 
-func NewEncoderWithType(ts ...reflect.Type) (enc *Encoder, err error) {
-
-	defer func() {
-		if r := recover(); r != nil {
-			enc = nil
-			err = errors.New("could not build encoder")
-		}
-	}()
-
+func NewEncoderWithType(ts ...reflect.Type) *Encoder {
 	l := len(ts)
 	engines := make([]encEng, l)
 	for i := 0; i < l; i++ {
@@ -88,57 +66,36 @@ func NewEncoderWithType(ts ...reflect.Type) (enc *Encoder, err error) {
 	return &Encoder{
 		length:  l,
 		engines: engines,
-	}, nil
+	}
 }
 
 // Encoder object in bytes (input value must be a pointer)
-func (e *Encoder) Encode(is ...interface{}) (o []byte, err error) {
-
-	defer func() {
-		if r := recover(); r != nil {
-			o = nil
-			err = errors.New("could not encode")
-		}
-	}()
-
+func (e *Encoder) Encode(is ...interface{}) []byte {
 	engines := e.engines
 	for i := 0; i < len(engines) && i < len(is); i++ {
 		engines[i](e, (*[2]unsafe.Pointer)(unsafe.Pointer(&is[i]))[1])
 	}
-	return e.reset(), nil
+	return e.reset()
 }
 
 // Encoder object in bytes (input value must be a pointer of type unsafe.Pointer)
-func (e *Encoder) EncodePtr(ps ...unsafe.Pointer) (o []byte, err error) {
-
-	defer func() {
-		if r := recover(); r != nil {
-			o = nil
-			err = errors.New("could not encode")
-		}
-	}()
+func (e *Encoder) EncodePtr(ps ...unsafe.Pointer) []byte {
 
 	engines := e.engines
 	for i := 0; i < len(engines) && i < len(ps); i++ {
 		engines[i](e, ps[i])
 	}
-	return e.reset(), nil
+	return e.reset()
 }
 
 // Encode value vs
-func (e *Encoder) EncodeValue(vs ...reflect.Value) (o []byte, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			o = nil
-			err = errors.New("could not encode")
-		}
-	}()
+func (e *Encoder) EncodeValue(vs ...reflect.Value) []byte {
 
 	engines := e.engines
 	for i := 0; i < len(engines) && i < len(vs); i++ {
 		engines[i](e, getUnsafePointer(&vs[i]))
 	}
-	return e.reset(), nil
+	return e.reset()
 }
 
 // Sets output buffer for encoder

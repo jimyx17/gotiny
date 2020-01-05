@@ -25,19 +25,13 @@ func Unmarshal(buf []byte, is ...interface{}) (ret int, err error) {
 }
 
 func NewDecoderWithPtr(is ...interface{}) (dec *Decoder, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			dec = nil
-			err = errors.New("could not decode this")
-		}
-	}()
 
 	l := len(is)
 	engines := make([]decEng, l)
 	for i := 0; i < l; i++ {
 		rt := reflect.TypeOf(is[i])
 		if rt.Kind() != reflect.Ptr {
-			panic("must a pointer type!")
+			return nil, errors.New("must a pointer type!")
 		}
 		engines[i] = getDecEngine(rt.Elem())
 	}
@@ -47,15 +41,7 @@ func NewDecoderWithPtr(is ...interface{}) (dec *Decoder, err error) {
 	}, nil
 }
 
-func NewDecoder(is ...interface{}) (dec *Decoder, err error) {
-
-	defer func() {
-		if r := recover(); r != nil {
-			dec = nil
-			err = errors.New("could not build decoder")
-		}
-	}()
-
+func NewDecoder(is ...interface{}) *Decoder {
 	l := len(is)
 	engines := make([]decEng, l)
 	for i := 0; i < l; i++ {
@@ -64,17 +50,10 @@ func NewDecoder(is ...interface{}) (dec *Decoder, err error) {
 	return &Decoder{
 		length:  l,
 		engines: engines,
-	}, nil
+	}
 }
 
-func NewDecoderWithType(ts ...reflect.Type) (dec *Decoder, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			dec = nil
-			err = errors.New("could not build decoder")
-		}
-	}()
-
+func NewDecoderWithType(ts ...reflect.Type) *Decoder {
 	l := len(ts)
 	des := make([]decEng, l)
 	for i := 0; i < l; i++ {
@@ -83,7 +62,7 @@ func NewDecoderWithType(ts ...reflect.Type) (dec *Decoder, err error) {
 	return &Decoder{
 		length:  l,
 		engines: des,
-	}, nil
+	}
 }
 
 func (d *Decoder) reset() int {
@@ -97,52 +76,36 @@ func (d *Decoder) reset() int {
 // is is pointer of variable
 func (d *Decoder) Decode(buf []byte, is ...interface{}) (o int, err error) {
 
-	defer func() {
-		if r := recover(); r != nil {
-			o = 0
-			err = errors.New("could not decode")
-		}
-	}()
-
 	d.buf = buf
 	engines := d.engines
 	for i := 0; i < len(engines) && i < len(is); i++ {
-		engines[i](d, (*[2]unsafe.Pointer)(unsafe.Pointer(&is[i]))[1])
+		if err := engines[i](d, (*[2]unsafe.Pointer)(unsafe.Pointer(&is[i]))[1]); err != nil {
+			return 0, err
+		}
 	}
 	return d.reset(), nil
 }
 
 // ps is a unsafe.Pointer of the variable
 func (d *Decoder) DecodePtr(buf []byte, ps ...unsafe.Pointer) (o int, err error) {
-
-	defer func() {
-		if r := recover(); r != nil {
-			o = 0
-			err = errors.New("could not decode")
-		}
-	}()
-
 	d.buf = buf
 	engines := d.engines
 	for i := 0; i < len(engines) && i < len(ps); i++ {
-		engines[i](d, ps[i])
+		if err := engines[i](d, ps[i]); err != nil {
+			return 0, err
+		}
 	}
 	return d.reset(), nil
 }
 
 func (d *Decoder) DecodeValue(buf []byte, vs ...reflect.Value) (o int, err error) {
 
-	defer func() {
-		if r := recover(); r != nil {
-			o = 0
-			err = errors.New("could not decode")
-		}
-	}()
-
 	d.buf = buf
 	engines := d.engines
 	for i := 0; i < len(engines) && i < len(vs); i++ {
-		engines[i](d, unsafe.Pointer(vs[i].UnsafeAddr()))
+		if err := engines[i](d, unsafe.Pointer(vs[i].UnsafeAddr())); err != nil {
+			return 0, err
+		}
 	}
 	return d.reset(), nil
 }

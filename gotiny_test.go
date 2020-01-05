@@ -13,7 +13,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/niubaoshu/gotiny"
+	"github.com/jimyx17/gotiny"
 	"github.com/niubaoshu/goutils"
 )
 
@@ -68,11 +68,13 @@ func (tint) Write([]byte) (int, error) { return 0, nil }
 func (tint) Close() error              { return nil }
 
 func (v *gotinyTest) GotinyEncode(buf []byte) []byte {
-	return append(buf, gotiny.Marshal((*string)(v))...)
+	b, _ := gotiny.Marshal((*string)(v))
+	return append(buf, b...)
 }
 
 func (v *gotinyTest) GotinyDecode(buf []byte) int {
-	return gotiny.Unmarshal(buf, (*string)(v))
+	r, _ := gotiny.Unmarshal(buf, (*string)(v))
+	return r
 }
 
 func genBase() baseTyp {
@@ -330,12 +332,17 @@ func init() {
 		srcp[i] = unsafe.Pointer(reflect.ValueOf(&srci[i]).Elem().InterfaceData()[1])
 		retp[i] = unsafe.Pointer(reflect.ValueOf(&reti[i]).Elem().InterfaceData()[1])
 	}
-	fmt.Printf("total %d value. buf length: %d, encode length: %d \n", length, cap(buf), len(gotiny.Marshal(srci...)))
+	b, _ := gotiny.Marshal(srci...)
+	fmt.Printf("total %d value. buf length: %d, encode length: %d \n", length, cap(buf), len(b))
 }
 
 func TestEncodeDecode(t *testing.T) {
-	buf := gotiny.Marshal(srci...)
-	gotiny.Unmarshal(buf, reti...)
+
+	buf, _ := gotiny.Marshal(srci...)
+	_, err := gotiny.Unmarshal(buf, reti...)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
 	for i, r := range reti {
 		Assert(t, buf, srci[i], r)
 	}
@@ -358,7 +365,8 @@ func TestPtr(t *testing.T) {
 }
 
 func TestValue(t *testing.T) {
-	d.DecodeValue(e.EncodeValue(srcv...), retv...)
+	o := e.EncodeValue(srcv...)
+	d.DecodeValue(o, retv...)
 	for i, r := range reti {
 		Assert(t, buf, srci[i], r)
 	}
@@ -371,7 +379,7 @@ func TestMap(t *testing.T) {
 	var rm = map[string]int{
 		//"b": 2,
 	}
-	buf := gotiny.Marshal(&sm)
+	buf, _ := gotiny.Marshal(&sm)
 	gotiny.Unmarshal(buf, &rm)
 	Assert(t, buf, sm, rm)
 }
@@ -380,7 +388,9 @@ func TestHelloWorld(t *testing.T) {
 	hello, world := []byte("hello, "), "world"
 	hello2, world2 := []byte("1"), ""
 
-	gotiny.Unmarshal(gotiny.Marshal(&hello, &world), &hello2, &world2)
+	o, _ := gotiny.Marshal(&hello, &world)
+
+	gotiny.Unmarshal(o, &hello2, &world2)
 	if !bytes.Equal(hello2, hello) || world2 != world {
 		t.Error(hello2, world2)
 	}
@@ -422,15 +432,15 @@ func TestGetName(t *testing.T) {
 		val interface{}
 	}{
 		{"int", int(1)},
-		{"github.com/niubaoshu/gotiny.Encoder", gotiny.Encoder{}},
+		{"github.com/jimyx17/gotiny.Encoder", gotiny.Encoder{}},
 		{"*int", (*int)(nil)},
 		{"**int", (**int)(nil)},
 		{"[]int", []int{}},
 		{"[]time.Time", []time.Time{}},
-		{"[]github.com/niubaoshu/gotiny.GoTinySerializer", []gotiny.GoTinySerializer{}},
+		{"[]github.com/jimyx17/gotiny.GoTinySerializer", []gotiny.GoTinySerializer{}},
 		{"*interface {}", (*interface{})(nil)},
 		{"map[int]string", map[int]string{}},
-		{"struct { a struct { int; b int; dec []github.com/niubaoshu/gotiny.Decoder; abb interface {}; c io.ReadWriteCloser } }",
+		{"struct { a struct { int; b int; dec []github.com/jimyx17/gotiny.Decoder; abb interface {}; c io.ReadWriteCloser } }",
 			struct {
 				a struct {
 					int

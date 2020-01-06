@@ -2,15 +2,21 @@ package gotiny
 
 import (
 	"errors"
+	"github.com/jimyx17/gotiny/bst"
 	"reflect"
 	"unsafe"
 )
+
+const MAXOBJREFS = 1024
 
 type Encoder struct {
 	buf     []byte // out encode buffer
 	off     int
 	boolPos int  // Next bool pos (buf[boolPos])
 	boolBit byte //N ext bool bit in buf boolpos
+	ptr     bst.Node
+	objPos  uint64
+	// objs    [MAXOBJREFS]unsafe.Pointer
 
 	engines []encEng
 	length  int

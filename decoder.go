@@ -4,6 +4,8 @@ import (
 	"errors"
 	"reflect"
 	"unsafe"
+
+	"github.com/jimyx17/gotiny/bst"
 )
 
 type Decoder struct {
@@ -11,6 +13,7 @@ type Decoder struct {
 	index   int    //Next byte index
 	boolPos byte   // Next bool pos (buf[boolPos])
 	boolBit byte   // Next bool bit in buf boolpos
+	ptr     bst.Node
 
 	engines []decEng // Decoders
 	length  int      // n of Decoders
@@ -21,6 +24,7 @@ func Unmarshal(buf []byte, is ...interface{}) (ret int, err error) {
 	if err != nil {
 		return 0, errors.New("could not unmarshal this")
 	}
+
 	return d.Decode(buf, is...)
 }
 

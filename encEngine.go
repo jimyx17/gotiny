@@ -100,9 +100,17 @@ func buildEncEngine(rt reflect.Type, engPtr *encEng) {
 			isNotNil := !isNil(p)
 			e.encIsNotNil(isNotNil)
 			if isNotNil {
-				eEng(e, *(*unsafe.Pointer)(p))
+				// e.ptr.Insert(p.)
+				// eEng(e, *(*unsafe.Pointer)(p))
+				ref, build := getReference(e, p)
+				e.encBool(build)
+				e.encUint64(ref)
+				if build {
+					eEng(e, *(*unsafe.Pointer)(p))
+				}
 			}
 		}
+
 	case reflect.Array:
 		et, l := rt.Elem(), rt.Len()
 		defer buildEncEngine(et, &eEng)
@@ -112,6 +120,7 @@ func buildEncEngine(rt reflect.Type, engPtr *encEng) {
 				eEng(e, unsafe.Pointer(uintptr(p)+uintptr(i)*size))
 			}
 		}
+
 	case reflect.Slice:
 		et := rt.Elem()
 		size := et.Size()

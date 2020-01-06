@@ -216,88 +216,88 @@ var (
 	v9interface interface{}        = &v8interface
 
 	vs = []interface{}{
-		vbool,
-		vfbool,
-		false,
-		true,
-		[10]bool{false, true, true, false, true, true},
-		vint8,
-		vint16,
-		vint32,
-		vint64,
-		v2int64,
-		v3int64,
-		vint,
-		vint1,
-		vint2,
-		vint3,
-		vuint,
-		vuint8,
-		vuint16,
-		vuint32,
-		vuint64,
-		v2uint64,
-		v3uint64,
-		v4uint64,
+		// vbool,
+		// vfbool,
+		// false,
+		// true,
+		// [10]bool{false, true, true, false, true, true},
+		// vint8,
+		// vint16,
+		// vint32,
+		// vint64,
+		// v2int64,
+		// v3int64,
+		// vint,
+		// vint1,
+		// vint2,
+		// vint3,
+		// vuint,
+		// vuint8,
+		// vuint16,
+		// vuint32,
+		// vuint64,
+		// v2uint64,
+		// v3uint64,
+		// v4uint64,
 		vuintptr,
-		vfloat32,
-		vfloat64,
-		vcomp64,
-		vcomp128,
-		vstring,
-		base,
-		vbytes,
-		vslicebytes,
-		v2slice,
-		v3slice,
-		varr,
-		vmap,
-		v2map,
-		v3map,
-		v4map,
-		v5map,
-		v6map,
-		v7map,
-		vnilmap,
-		vptr,
-		vsliceptr,
-		vptrslice,
-		vnilptr,
-		v2nilptr,
-		vnilptrptr,
-		varrptr,
-		vtime,
-		vslicebase,
-		vslicestring,
-		varray,
-		vinterface,
-		v1interface,
-		v2interface,
-		v3interface,
-		v4interface,
-		v5interface,
-		v6interface,
-		v7interface,
-		v8interface,
-		v9interface,
-		unsafePointer,
-		vcir,
-		v2cir,
-		v3cir,
-		vcirStruct,
-		v2cirStruct,
-		vcirmap,
-		v2cirmap,
-		v1cirSlice,
-		v2cirSlice,
-		v3cirSlice,
-		v4cirSlice,
-		vAstruct,
-		vGotinyTest,
-		v2GotinyTest,
-		vbinTest,
-		v2binTest,
-		struct{}{},
+		// vfloat32,
+		// vfloat64,
+		// vcomp64,
+		// vcomp128,
+		// vstring,
+		// base,
+		// vbytes,
+		// vslicebytes,
+		// v2slice,
+		// v3slice,
+		// varr,
+		// vmap,
+		// v2map,
+		// v3map,
+		// v4map,
+		// v5map,
+		// v6map,
+		// v7map,
+		// vnilmap,
+		// vptr,
+		// vsliceptr,
+		// vptrslice,
+		// vnilptr,
+		// v2nilptr,
+		// vnilptrptr,
+		// varrptr,
+		// vtime,
+		// vslicebase,
+		// vslicestring,
+		// varray,
+		// vinterface,
+		// v1interface,
+		// v2interface,
+		// v3interface,
+		// v4interface,
+		// v5interface,
+		// v6interface,
+		// v7interface,
+		// v8interface,
+		// v9interface,
+		// unsafePointer,
+		// vcir,
+		// v2cir,
+		// v3cir,
+		// vcirStruct,
+		// v2cirStruct,
+		// vcirmap,
+		// v2cirmap,
+		// v1cirSlice,
+		// v2cirSlice,
+		// v3cirSlice,
+		// v4cirSlice,
+		// vAstruct,
+		// vGotinyTest,
+		// v2GotinyTest,
+		// vbinTest,
+		// v2binTest,
+		// struct{}{},
 	}
 
 	length = len(vs)
@@ -346,6 +346,44 @@ func TestEncodeDecode(t *testing.T) {
 	for i, r := range reti {
 		Assert(t, buf, srci[i], r)
 	}
+}
+
+type node struct {
+	u string
+	n *nodet
+}
+
+type nodet struct {
+	u2 string
+	n  *node
+}
+
+func TestCycleRef(t *testing.T) {
+
+	var a node
+	var b node
+	var c node
+	var d node
+	var at nodet
+	var bt nodet
+	var ct nodet
+
+	a.n = &at
+	a.u = "namea"
+	at.n = &b
+	at.u2 = "nameat"
+	b.n = &bt
+	b.u = "nameb"
+	bt.n = &c
+	bt.u2 = "namebt"
+	c.n = &ct
+	c.u = "namcec"
+	ct.n = &a
+	ct.u2 = "namect"
+
+	buf, _ := gotiny.Marshal(&a)
+	gotiny.Unmarshal(buf, &d)
+	// Assert(t, buf, a, d)
 }
 
 func TestInterface(t *testing.T) {

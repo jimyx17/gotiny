@@ -51,7 +51,9 @@ float32/float64 use [gob](https://golang.org/pkg/encoding/gob/) encoding
 ### String
 first encodes the length as uint64，then encodes the byte array itself
 ### Pointers
-If nil, it ends with false bool encoded. Else, it encodes a true and then dereference the pointer and encodes it.
+If nil, it ends with false bool encoded.
+Otherwise, it will add a true to the stream, then it writes if it is the first reference to that pointer
+If it is the first reference will derefrence and write into the stream the pointed data structure.
 ### Array & Slice
 First convert length to uint64, then use each element own encoding method.
 ### Maps
@@ -75,6 +77,6 @@ MIT
 
 The idea will remain the same, the only changes that are going to be introduced are:
 
-- Errors won't panic (this might imply performance penalties)
-- Will try to find a solucion for cycling values
-- Will try to translate chinese into english... without understanding a single word of chinese and english not being my mother tongue
+- ~~Errors won't panic (this might imply performance penalties)~~
+- Will try to find a solucion for cycling values **WIP**
+- ~~Will try to translate chinese into english... without understanding a single word of chinese and english not being my mother tongue~~

@@ -5,3 +5,4 @@
 *.o
 *.out
 example/test.go
+gotiny.sublime-project

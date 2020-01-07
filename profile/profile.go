@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/jimyx17/gotiny"
-	"github.com/niubaoshu/goutils"
 )
 
 type str struct {
@@ -114,7 +113,6 @@ var (
 
 	spvals = make([]interface{}, len(vs))
 	rpvals = make([]interface{}, len(vs))
-	c      = goutils.NewComparer()
 
 	buf = make([]byte, 0, 2048)
 )
@@ -165,7 +163,7 @@ func main() {
 }
 
 func Assert(x, y interface{}) error {
-	if !c.DeepEqual(x, y) {
+	if !reflect.DeepEqual(x, y) {
 		return fmt.Errorf("\n exp type =  %T; value = %#v;\n got type = %T; value = %#v ", x, x, y, y)
 	}
 	return nil

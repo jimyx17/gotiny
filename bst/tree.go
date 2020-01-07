@@ -1,12 +1,22 @@
 package bst
 
+import "unsafe"
+
 // this only implementes a way to search pointers faster
 
 type Node struct {
-	Key   uint64
-	Index uint64
-	Left  *Node
-	Right *Node
+	Key     uint64
+	Index   uint16
+	Pointer unsafe.Pointer
+	Left    *Node
+	Right   *Node
+}
+
+func (n *Node) Empty() bool {
+	if n.Left == nil && n.Right == nil {
+		return true
+	}
+	return false
 }
 
 func (n *Node) Search(key uint64) *Node {
@@ -26,21 +36,22 @@ func (n *Node) Search(key uint64) *Node {
 	return n
 }
 
-func (n *Node) Insert(key uint64, index uint64) {
+func (n *Node) Insert(key uint64, index uint16, p unsafe.Pointer) {
 	if n.Key < key {
 		if n.Right == nil { // we found an empty spot, done!
-			n.Right = &Node{Key: key, Index: index}
+			n.Right = &Node{Key: key, Index: index, Pointer: p}
 		} else { // look right
-			n.Right.Insert(key, index)
+			n.Right.Insert(key, index, p)
 		}
 	} else if n.Key > key {
 		if n.Left == nil { // we found an empty spot, done!
-			n.Left = &Node{Key: key, Index: index}
+			n.Left = &Node{Key: key, Index: index, Pointer: p}
 		} else { // look left
-			n.Left.Insert(key, index)
+			n.Left.Insert(key, index, p)
 		}
 	}
-	// n.Key == key, don't need to do anything
+	n.Index = index
+	n.Pointer = p
 }
 
 func (n *Node) Delete(key uint64) *Node {

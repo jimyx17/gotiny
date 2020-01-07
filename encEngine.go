@@ -100,11 +100,9 @@ func buildEncEngine(rt reflect.Type, engPtr *encEng) {
 			isNotNil := !isNil(p)
 			e.encIsNotNil(isNotNil)
 			if isNotNil {
-				// e.ptr.Insert(p.)
-				// eEng(e, *(*unsafe.Pointer)(p))
-				ref, build := getReference(e, p)
+				ref, build := getReference(e, *(*unsafe.Pointer)(p))
 				e.encBool(build)
-				e.encUint64(ref)
+				e.encUint16(ref)
 				if build {
 					eEng(e, *(*unsafe.Pointer)(p))
 				}
@@ -202,4 +200,5 @@ func buildEncEngine(rt reflect.Type, engPtr *encEng) {
 	}
 	rt2encEng[rt] = engine
 	*engPtr = engine
+
 }

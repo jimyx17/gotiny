@@ -107,13 +107,13 @@ func encBytes(e *Encoder, p unsafe.Pointer) {
 	}
 }
 
-func getReference(e *Encoder, p unsafe.Pointer) (uint64, bool) {
+func getReference(e *Encoder, p unsafe.Pointer) (uint16, bool) {
 	dataIndex := e.ptr.Search(uint64((uintptr(p))))
 	if dataIndex != nil {
 		return dataIndex.Index, false
 	}
 
-	e.ptr.Insert(uint64((uintptr(p))), e.objPos)
+	e.ptr.Insert(uint64((uintptr(p))), e.objPos, nil)
 	e.objPos++
 	return e.objPos - 1, true
 }

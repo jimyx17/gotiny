@@ -14,6 +14,7 @@ type Decoder struct {
 	boolPos byte   // Next bool pos (buf[boolPos])
 	boolBit byte   // Next bool bit in buf boolpos
 	ptr     bst.Node
+	objPos  uint16
 
 	engines []decEng // Decoders
 	length  int      // n of Decoders
@@ -74,6 +75,9 @@ func (d *Decoder) reset() int {
 	d.index = 0
 	d.boolPos = 0
 	d.boolBit = 0
+	d.objPos = 0
+	d.ptr = bst.Node{}
+
 	return index
 }
 
@@ -83,9 +87,11 @@ func (d *Decoder) Decode(buf []byte, is ...interface{}) (o int, err error) {
 	d.buf = buf
 	engines := d.engines
 	for i := 0; i < len(engines) && i < len(is); i++ {
+		d.ptr.Insert(0, 0, (*[2]unsafe.Pointer)(unsafe.Pointer(&is[i]))[1])
 		if err := engines[i](d, (*[2]unsafe.Pointer)(unsafe.Pointer(&is[i]))[1]); err != nil {
 			return 0, err
 		}
+		d.ptr = bst.Node{}
 	}
 	return d.reset(), nil
 }

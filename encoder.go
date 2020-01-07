@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-const MAXOBJREFS = 1024
+const MAXOBJREFS = 65000
 
 type Encoder struct {
 	buf     []byte // out encode buffer
@@ -15,8 +15,7 @@ type Encoder struct {
 	boolPos int  // Next bool pos (buf[boolPos])
 	boolBit byte //N ext bool bit in buf boolpos
 	ptr     bst.Node
-	objPos  uint64
-	// objs    [MAXOBJREFS]unsafe.Pointer
+	objPos  uint16
 
 	engines []encEng
 	length  int
@@ -79,7 +78,10 @@ func NewEncoderWithType(ts ...reflect.Type) *Encoder {
 func (e *Encoder) Encode(is ...interface{}) []byte {
 	engines := e.engines
 	for i := 0; i < len(engines) && i < len(is); i++ {
+		e.ptr.Insert(uint64(uintptr((*[2]unsafe.Pointer)(unsafe.Pointer(&is[i]))[1])), 0, nil)
+		e.objPos++
 		engines[i](e, (*[2]unsafe.Pointer)(unsafe.Pointer(&is[i]))[1])
+		e.ptr = bst.Node{}
 	}
 	return e.reset()
 }
@@ -115,5 +117,7 @@ func (e *Encoder) reset() []byte {
 	e.buf = buf[:e.off]
 	e.boolBit = 0
 	e.boolPos = 0
+	e.ptr = bst.Node{}
+	e.objPos = 0
 	return buf
 }

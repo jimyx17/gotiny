@@ -126,6 +126,30 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 		if v1.Pointer() == v2.Pointer() {
 			return true
 		}
+		if v1.Type().Key().Kind() == reflect.Ptr {
+			dupv2 := reflect.ValueOf(DeepClone(valueInterface(v2, false)))
+			for _, k1 := range v1.MapKeys() {
+				if !k1.IsValid() {
+					return false
+				}
+				lookup := false
+				for _, dk2 := range dupv2.MapKeys() {
+					if dk2.IsValid() && deepValueEqual(k1, dk2, visited, depth+1) {
+						val1 := v1.MapIndex(k1)
+						val2 := dupv2.MapIndex(dk2)
+						if val1.IsValid() && val2.IsValid() && deepValueEqual(val1, val2, visited, depth+1) {
+							dupv2.SetMapIndex(dk2, reflect.Value{})
+							lookup = true
+							break
+						}
+					}
+				}
+				if !lookup {
+					return false
+				}
+			}
+			return true
+		}
 		for _, k := range v1.MapKeys() {
 			val1 := v1.MapIndex(k)
 			val2 := v2.MapIndex(k)

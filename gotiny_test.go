@@ -347,14 +347,14 @@ func TestEncodeDecode(t *testing.T) {
 	}
 }
 
-type node struct {
-	u string
-	n *nodet
-}
-
 type nodet struct {
 	u2 string
 	n  *node
+}
+
+type node struct {
+	u string
+	n *nodet
 }
 
 func TestCycleRef(t *testing.T) {
@@ -377,7 +377,26 @@ func TestCycleRef(t *testing.T) {
 
 	buf, _ := gotiny.Marshal(&a)
 	gotiny.Unmarshal(buf, &d)
+	fmt.Printf("SRC %p %p\n", a.n.n, a.n.n.n.n)
+	fmt.Printf("DST %p %p\n", d.n.n, d.n.n.n.n)
 	Assert(t, buf, a, d)
+}
+
+func TestSelfRef(t *testing.T) {
+
+	type a struct {
+		a *a
+	}
+	var b a
+	var c a
+	b.a = &b
+
+	buf, _ := gotiny.Marshal(&b)
+	gotiny.Unmarshal(buf, &c)
+	if &c != c.a {
+		t.Fatalf("%p!=%p", &c, c.a)
+	}
+	Assert(t, buf, b, c)
 }
 
 func TestInterface(t *testing.T) {
@@ -437,8 +456,12 @@ func Assert(t *testing.T, buf []byte, x, y interface{}) {
 
 func indirect(i interface{}) interface{} {
 	v := reflect.ValueOf(i)
-	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
+	var counter int
+	for counter = 0; (v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface) && counter < 10; counter++ {
 		v = v.Elem()
+	}
+	if counter >= 10 {
+		return nil
 	}
 	return v.Interface()
 }

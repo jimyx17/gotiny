@@ -113,17 +113,13 @@ func buildDecEngine(rt reflect.Type, engPtr *decEng) error {
 					if isNil(p) {
 						*(*unsafe.Pointer)(p) = unsafe.Pointer(reflect.New(et).Elem().UnsafeAddr())
 					}
+
+					d.ptr[ref] = *(*unsafe.Pointer)(p)
 					if err := eEng(d, *(*unsafe.Pointer)(p)); err != nil {
 						return err
 					}
-					d.ptr.Insert(uint64(ref), 0, p)
 				} else {
-					n := d.ptr.Search(uint64(ref))
-					if n == nil {
-						return errors.New("could not decode ptr reference")
-					}
-					*(*unsafe.Pointer)(p) = n.Pointer
-					// *(*unsafe.Pointer)(p) = (*unsafe.Pointer)(uintptr(n.Index))
+					*(*unsafe.Pointer)(p) = d.ptr[ref]
 				}
 
 			} else if !isNil(p) {

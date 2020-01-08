@@ -377,8 +377,6 @@ func TestCycleRef(t *testing.T) {
 
 	buf, _ := gotiny.Marshal(&a)
 	gotiny.Unmarshal(buf, &d)
-	fmt.Printf("SRC %p %p\n", a.n.n, a.n.n.n.n)
-	fmt.Printf("DST %p %p\n", d.n.n, d.n.n.n.n)
 	Assert(t, buf, a, d)
 }
 

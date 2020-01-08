@@ -2,7 +2,6 @@ package gotiny
 
 import (
 	"errors"
-	"github.com/jimyx17/gotiny/bst"
 	"reflect"
 	"unsafe"
 )
@@ -14,9 +13,8 @@ type Encoder struct {
 	off     int
 	boolPos int  // Next bool pos (buf[boolPos])
 	boolBit byte //N ext bool bit in buf boolpos
-	ptr     bst.Node
-	objPos  uint64
-	// objs    [MAXOBJREFS]unsafe.Pointer
+	objPos uint16
+	ptr    [MAXOBJREFS]uint64
 
 	engines []encEng
 	length  int
@@ -80,6 +78,7 @@ func (e *Encoder) Encode(is ...interface{}) []byte {
 	engines := e.engines
 	for i := 0; i < len(engines) && i < len(is); i++ {
 		engines[i](e, (*[2]unsafe.Pointer)(unsafe.Pointer(&is[i]))[1])
+		e.objPos = 0
 	}
 	return e.reset()
 }
@@ -90,6 +89,7 @@ func (e *Encoder) EncodePtr(ps ...unsafe.Pointer) []byte {
 	engines := e.engines
 	for i := 0; i < len(engines) && i < len(ps); i++ {
 		engines[i](e, ps[i])
+		e.objPos = 0
 	}
 	return e.reset()
 }
@@ -100,6 +100,7 @@ func (e *Encoder) EncodeValue(vs ...reflect.Value) []byte {
 	engines := e.engines
 	for i := 0; i < len(engines) && i < len(vs); i++ {
 		engines[i](e, getUnsafePointer(&vs[i]))
+		e.objPos = 0
 	}
 	return e.reset()
 }
@@ -115,5 +116,7 @@ func (e *Encoder) reset() []byte {
 	e.buf = buf[:e.off]
 	e.boolBit = 0
 	e.boolPos = 0
+	// e.ptr = bst.Node{}
+	e.objPos = 0
 	return buf
 }

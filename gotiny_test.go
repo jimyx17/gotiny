@@ -14,7 +14,6 @@ import (
 	"unsafe"
 
 	"github.com/jimyx17/gotiny"
-	"github.com/niubaoshu/goutils"
 )
 
 type (
@@ -304,7 +303,6 @@ var (
 	buf    = make([]byte, 0, 1<<14)
 	e      = gotiny.NewEncoder(vs...)
 	d      = gotiny.NewDecoder(vs...)
-	c      = goutils.NewComparer()
 
 	srci = make([]interface{}, length)
 	reti = make([]interface{}, length)
@@ -315,8 +313,7 @@ var (
 	typs = make([]reflect.Type, length)
 )
 
-func init() {
-	e.AppendTo(buf)
+func prepare() {
 	for i := 0; i < length; i++ {
 		typs[i] = reflect.TypeOf(vs[i])
 		srcv[i] = reflect.ValueOf(vs[i])
@@ -337,10 +334,10 @@ func init() {
 }
 
 func TestEncodeDecode(t *testing.T) {
-
+	prepare()
 	buf, _ := gotiny.Marshal(srci...)
 	_, err := gotiny.Unmarshal(buf, reti...)
-	if err != nil {
+	if err != nil {  
 		t.Fatalf(err.Error())
 	}
 	for i, r := range reti {
@@ -348,45 +345,58 @@ func TestEncodeDecode(t *testing.T) {
 	}
 }
 
-type node struct {
-	u string
-	n *nodet
-}
-
 type nodet struct {
 	u2 string
 	n  *node
+}
+
+type node struct {
+	u string
+	n *nodet
 }
 
 func TestCycleRef(t *testing.T) {
 
 	var a node
 	var b node
-	var c node
 	var d node
+
 	var at nodet
 	var bt nodet
-	var ct nodet
 
+	a.u = "nodoa"
 	a.n = &at
-	a.u = "namea"
+	at.u2 = "nodoat"
 	at.n = &b
-	at.u2 = "nameat"
+	b.u = "nodob"
 	b.n = &bt
-	b.u = "nameb"
-	bt.n = &c
-	bt.u2 = "namebt"
-	c.n = &ct
-	c.u = "namcec"
-	ct.n = &a
-	ct.u2 = "namect"
+	bt.u2 = "nodobt"
+	bt.n = &b
 
 	buf, _ := gotiny.Marshal(&a)
 	gotiny.Unmarshal(buf, &d)
-	// Assert(t, buf, a, d)
+	Assert(t, buf, a, d)
+}
+
+func TestSelfRef(t *testing.T) {
+
+	type a struct {
+		a *a
+	}
+	var b a
+	var c a
+	b.a = &b
+
+	buf, _ := gotiny.Marshal(&b)
+	gotiny.Unmarshal(buf, &c)
+	// if &c != c.a {
+	// 	t.Fatalf("%p!=%p", &c, c.a)
+	// }
+	Assert(t, buf, b, c)
 }
 
 func TestInterface(t *testing.T) {
+	prepare()
 	buf := e.Encode(srci...)
 	d.Decode(buf, reti...)
 	for i, r := range reti {
@@ -395,6 +405,7 @@ func TestInterface(t *testing.T) {
 }
 
 func TestPtr(t *testing.T) {
+	prepare()
 	buf := e.EncodePtr(srcp...)
 	d.DecodePtr(buf, retp...)
 	for i, r := range reti {
@@ -403,6 +414,7 @@ func TestPtr(t *testing.T) {
 }
 
 func TestValue(t *testing.T) {
+	prepare()
 	o := e.EncodeValue(srcv...)
 	d.DecodeValue(o, retv...)
 	for i, r := range reti {
@@ -435,7 +447,7 @@ func TestHelloWorld(t *testing.T) {
 }
 
 func Assert(t *testing.T, buf []byte, x, y interface{}) {
-	if !c.DeepEqual(x, y) {
+	if !DeepEqual(x, y) {
 		e, g := indirect(x), indirect(y)
 		t.Errorf("\nbuf : %v\nlength:%d \nexp type = %T; value = %+v;\ngot type = %T; value = %+v; \n", buf, len(buf), e, e, g, g)
 	}
@@ -443,8 +455,12 @@ func Assert(t *testing.T, buf []byte, x, y interface{}) {
 
 func indirect(i interface{}) interface{} {
 	v := reflect.ValueOf(i)
-	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
+	var counter int
+	for counter = 0; (v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface) && counter < 10; counter++ {
 		v = v.Elem()
+	}
+	if counter >= 10 {
+		return nil
 	}
 	return v.Interface()
 }

@@ -24,10 +24,44 @@ The base idea is to generate encoders/decoders in advance so the use of reflect 
 - Only strictly the same encoder / decoder would marshal/unmarshal
 - null type would be serialized
 - Really small size of serialized data
+
 ## Cycle values won't work TODO 
-	type a *a
-	var b a
-	b = &b
+	Cycle reference will work with some caveats
+    There is one remaining issue with this current approach. When the data
+    structure is already stored, pointers are deferrenced anyway. ie:
+    
+    type a *a
+    var b a
+    b = &b
+    
+    After serialization/deserialization cycle would be transalted into (2 instances instead of 1):
+    
+    copy of b.1 -> copy of b.2 -> copy of b.2 -> copy of b.2 ...
+    
+    or:
+
+    type data struct {
+          a int
+          b *int
+    }
+    
+    var b data
+    
+    b.a = 1
+    b.b = &b.a
+    
+    After serialization/deserialization cycle b.b won't be linked to b.a,
+    so if we change b.a, b.b would remain the same. 
+	I can think of two possible solutions for this and I don't know if it worth the effort.
+	
+	First approach, we can scan all current object references and store them, only afterwards start the encoding and
+	if we find a pointer to the current structure, just save the link to the reference position.
+	
+	Second approach, instead of scanning in advance, we can store the address while we visit the instances and only dereference
+	pointers after we've finished the encoding of the current object.
+
+	The latter might gain a little (not much) performance over the first one, but it requires modifications in the protocol itself.
+	The former is way easier but performance wise... would be worse. 
 
 ## install
 ```bash
@@ -78,5 +112,5 @@ MIT
 The idea will remain the same, the only changes that are going to be introduced are:
 
 - ~~Errors won't panic (this might imply performance penalties)~~
-- Will try to find a solucion for cycling values **WIP**
+- Will try to find a solucion for cycling values **WIP, partially working**
 - ~~Will try to translate chinese into english... without understanding a single word of chinese and english not being my mother tongue~~

@@ -99,31 +99,27 @@ func buildDecEngine(rt reflect.Type, engPtr *decEng) error {
 			}
 
 			if ut {
-				if isNil(p) {
-					*(*unsafe.Pointer)(p) = unsafe.Pointer(reflect.New(et).Elem().UnsafeAddr())
-				}
-
 				var firstRef bool
 				if err := d.decBool(&firstRef); err != nil {
 					return err
 				}
 
-				var ref uint64
-				if err := d.decUint64(&ref); err != nil {
+				var ref uint16
+				if err := d.decUint16(&ref); err != nil {
 					return err
 				}
 
 				if firstRef {
+					if isNil(p) {
+						*(*unsafe.Pointer)(p) = unsafe.Pointer(reflect.New(et).Elem().UnsafeAddr())
+					}
+
+					d.ptr[ref] = *(*unsafe.Pointer)(p)
 					if err := eEng(d, *(*unsafe.Pointer)(p)); err != nil {
 						return err
 					}
-					d.ptr.Insert(ref, uint64(uintptr(p)))
 				} else {
-					n := d.ptr.Search(ref)
-					if n == nil {
-						return errors.New("could not decode ptr reference")
-					}
-					*(*unsafe.Pointer)(p) = unsafe.Pointer(uintptr(n.Index))
+					*(*unsafe.Pointer)(p) = d.ptr[ref]
 				}
 
 			} else if !isNil(p) {
@@ -273,6 +269,7 @@ func buildDecEngine(rt reflect.Type, engPtr *decEng) error {
 	default:
 		engine = baseDecEngines[kind]
 	}
+
 	rt2decEng[rt] = engine
 	*engPtr = engine
 	return nil

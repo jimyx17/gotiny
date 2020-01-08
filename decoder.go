@@ -4,8 +4,6 @@ import (
 	"errors"
 	"reflect"
 	"unsafe"
-
-	"github.com/jimyx17/gotiny/bst"
 )
 
 type Decoder struct {
@@ -13,7 +11,7 @@ type Decoder struct {
 	index   int    //Next byte index
 	boolPos byte   // Next bool pos (buf[boolPos])
 	boolBit byte   // Next bool bit in buf boolpos
-	ptr     bst.Node
+	ptr     [MAXOBJREFS]unsafe.Pointer
 
 	engines []decEng // Decoders
 	length  int      // n of Decoders

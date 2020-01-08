@@ -13,8 +13,8 @@ type Encoder struct {
 	off     int
 	boolPos int  // Next bool pos (buf[boolPos])
 	boolBit byte //N ext bool bit in buf boolpos
-	objPos uint16
-	ptr    [MAXOBJREFS]uint64
+	objPos  uint16
+	ptr     [MAXOBJREFS]uint64
 
 	engines []encEng
 	length  int
@@ -39,38 +39,47 @@ func NewEncoderWithPtr(ps ...interface{}) (e *Encoder, err error) {
 		if rt.Kind() != reflect.Ptr {
 			return nil, errors.New("must a pointer type!")
 		}
-		engines[i] = getEncEngine(rt.Elem())
+		engines[i], err = getEncEngine(rt.Elem())
+		if err != nil {
+			return
+		}
 	}
-	return &Encoder{
+	e = &Encoder{
 		length:  l,
 		engines: engines,
-	}, nil
+	}
+	return
 }
 
 // Creates a new from is
-func NewEncoder(is ...interface{}) *Encoder {
+func NewEncoder(is ...interface{}) (e *Encoder, err error) {
 
 	l := len(is)
 	engines := make([]encEng, l)
 	for i := 0; i < l; i++ {
-		engines[i] = getEncEngine(reflect.TypeOf(is[i]))
+		engines[i], err = getEncEngine(reflect.TypeOf(is[i]))
+		if err != nil {
+			return
+		}
 	}
-	return &Encoder{
+	e = &Encoder{
 		length:  l,
 		engines: engines,
 	}
+	return
 }
 
-func NewEncoderWithType(ts ...reflect.Type) *Encoder {
+func NewEncoderWithType(ts ...reflect.Type) (e *Encoder, err error) {
 	l := len(ts)
 	engines := make([]encEng, l)
 	for i := 0; i < l; i++ {
-		engines[i] = getEncEngine(ts[i])
+		engines[i], err = getEncEngine(ts[i])
 	}
-	return &Encoder{
+	e = &Encoder{
 		length:  l,
 		engines: engines,
 	}
+	return
 }
 
 // Encoder object in bytes (input value must be a pointer)

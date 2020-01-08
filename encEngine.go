@@ -1,6 +1,7 @@
 package gotiny
 
 import (
+	"errors"
 	"reflect"
 	"sync"
 	"time"
@@ -65,20 +66,20 @@ func UnusedUnixNanoEncodeTimeType() {
 	delete(rt2decEng, reflect.TypeOf((*time.Time)(nil)).Elem())
 }
 
-func getEncEngine(rt reflect.Type) encEng {
+func getEncEngine(rt reflect.Type) (engine encEng, err error) {
 	encLock.RLock()
-	engine := rt2encEng[rt]
+	engine = rt2encEng[rt]
 	encLock.RUnlock()
 	if engine != nil {
-		return engine
+		return
 	}
 	encLock.Lock()
-	buildEncEngine(rt, &engine)
+	err = buildEncEngine(rt, &engine)
 	encLock.Unlock()
-	return engine
+	return
 }
 
-func buildEncEngine(rt reflect.Type, engPtr *encEng) {
+func buildEncEngine(rt reflect.Type, engPtr *encEng) (err error) {
 	engine := rt2encEng[rt]
 	if engine != nil {
 		*engPtr = engine
@@ -173,12 +174,22 @@ func buildEncEngine(rt reflect.Type, engPtr *encEng) {
 				isNotNil := !isNil(p)
 				e.encIsNotNil(isNotNil)
 				if isNotNil {
+					var tmp encEng
+					var name string
 					v := reflect.ValueOf(*(*interface {
 						M()
 					})(p))
 					et := v.Type()
-					e.encString(getNameOfType(et))
-					getEncEngine(et)(e, getUnsafePointer(&v))
+					name, err = getNameOfType(et)
+					if err != nil {
+						return
+					}
+					e.encString(name)
+					tmp, err = getEncEngine(et)
+					if err != nil {
+						return
+					}
+					tmp(e, getUnsafePointer(&v))
 				}
 			}
 		} else {
@@ -186,19 +197,28 @@ func buildEncEngine(rt reflect.Type, engPtr *encEng) {
 				isNotNil := !isNil(p)
 				e.encIsNotNil(isNotNil)
 				if isNotNil {
+					var tmp encEng
+					var name string
 					v := reflect.ValueOf(*(*interface{})(p))
 					et := v.Type()
-					e.encString(getNameOfType(et))
-					getEncEngine(et)(e, getUnsafePointer(&v))
+					name, err = getNameOfType(et)
+					e.encString(name)
+
+					tmp, err = getEncEngine(et)
+					if err != nil {
+						return
+					}
+					tmp(e, getUnsafePointer(&v))
 				}
 			}
 		}
 	case reflect.Chan, reflect.Func:
-		panic("not support " + rt.String() + " type")
+		err = errors.New("not support " + rt.String() + " type")
+		return
 	default:
 		engine = encEngines[kind]
 	}
 	rt2encEng[rt] = engine
 	*engPtr = engine
-
+	return
 }

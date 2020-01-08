@@ -18,9 +18,9 @@ var (
 
 func init() {
 	t := reflect.TypeOf(value).Elem()
-	e = NewEncoderWithType(t)
+	e, _ = NewEncoderWithType(t)
 	d = NewDecoderWithType(t)
-	// buf = e.Encode(value)
+	buf = e.Encode(value)
 }
 
 func BenchmarkEncode(b *testing.B) {

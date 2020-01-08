@@ -1,6 +1,7 @@
 package gotiny
 
 import (
+	"errors"
 	"reflect"
 	"strconv"
 )
@@ -21,7 +22,7 @@ func getName(prefix []byte, rt reflect.Type) []byte {
 	if rt == nil || rt.Kind() == reflect.Invalid {
 		return append(prefix, []byte("<nil>")...)
 	}
-	if rt.Name() == "" { //未命名的，组合类型
+	if rt.Name() == "" { // No name
 		switch rt.Kind() {
 		case reflect.Ptr:
 			return getName(append(prefix, '*'), rt.Elem())
@@ -105,40 +106,41 @@ func getName(prefix []byte, rt reflect.Type) []byte {
 	return prefix
 }
 
-func getNameOfType(rt reflect.Type) string {
+func getNameOfType(rt reflect.Type) (string, error) {
 	if name, has := type2name[rt]; has {
-		return name
+		return name, nil
 	} else {
 		return registerType(rt)
 	}
 }
 
-func Register(i interface{}) string {
+func Register(i interface{}) (string, error) {
 	return registerType(reflect.TypeOf(i))
 }
 
-func registerType(rt reflect.Type) string {
-	name := GetNameByType(rt)
-	RegisterName(name, rt)
-	return name
+func registerType(rt reflect.Type) (name string, err error) {
+	name = GetNameByType(rt)
+	err = RegisterName(name, rt)
+	return
 }
 
-func RegisterName(name string, rt reflect.Type) {
+func RegisterName(name string, rt reflect.Type) error {
 	if name == "" {
-		panic("attempt to register empty name")
+		return errors.New("attempt to register empty name")
 	}
 
 	if rt == nil || rt.Kind() == reflect.Invalid {
-		panic("attempt to register nil type or invalid type")
+		return errors.New("attempt to register nil type or invalid type")
 	}
 
 	if _, has := type2name[rt]; has {
-		panic("gotiny: registering duplicate types for " + GetNameByType(rt))
+		return errors.New("gotiny: registering duplicate types for " + GetNameByType(rt))
 	}
 
 	if _, has := name2type[name]; has {
-		panic("gotiny: registering name" + name + " is exist")
+		return errors.New("gotiny: registering name" + name + " is exist")
 	}
 	name2type[name] = rt
 	type2name[rt] = name
+	return nil
 }

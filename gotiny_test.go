@@ -301,7 +301,7 @@ var (
 
 	length = len(vs)
 	buf    = make([]byte, 0, 1<<14)
-	e      = gotiny.NewEncoder(vs...)
+	e, _   = gotiny.NewEncoder(vs...)
 	d      = gotiny.NewDecoder(vs...)
 
 	srci = make([]interface{}, length)
@@ -337,7 +337,7 @@ func TestEncodeDecode(t *testing.T) {
 	prepare()
 	buf, _ := gotiny.Marshal(srci...)
 	_, err := gotiny.Unmarshal(buf, reti...)
-	if err != nil {  
+	if err != nil {
 		t.Fatalf(err.Error())
 	}
 	for i, r := range reti {

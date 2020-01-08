@@ -313,8 +313,7 @@ var (
 	typs = make([]reflect.Type, length)
 )
 
-func init() {
-	e.AppendTo(buf)
+func prepare() {
 	for i := 0; i < length; i++ {
 		typs[i] = reflect.TypeOf(vs[i])
 		srcv[i] = reflect.ValueOf(vs[i])
@@ -335,7 +334,7 @@ func init() {
 }
 
 func TestEncodeDecode(t *testing.T) {
-
+	prepare()
 	buf, _ := gotiny.Marshal(srci...)
 	_, err := gotiny.Unmarshal(buf, reti...)
 	if err != nil {
@@ -398,6 +397,7 @@ func TestSelfRef(t *testing.T) {
 }
 
 func TestInterface(t *testing.T) {
+	prepare()
 	buf := e.Encode(srci...)
 	d.Decode(buf, reti...)
 	for i, r := range reti {
@@ -406,6 +406,7 @@ func TestInterface(t *testing.T) {
 }
 
 func TestPtr(t *testing.T) {
+	prepare()
 	buf := e.EncodePtr(srcp...)
 	d.DecodePtr(buf, retp...)
 	for i, r := range reti {
@@ -414,6 +415,7 @@ func TestPtr(t *testing.T) {
 }
 
 func TestValue(t *testing.T) {
+	prepare()
 	o := e.EncodeValue(srcv...)
 	d.DecodeValue(o, retv...)
 	for i, r := range reti {

@@ -108,8 +108,8 @@ var (
 		slice,
 		mapt,
 	}
-	e = gotiny.NewEncoder(vs...)
-	d = gotiny.NewDecoder(vs...)
+	e, _ = gotiny.NewEncoder(vs...)
+	d    = gotiny.NewDecoder(vs...)
 
 	spvals = make([]interface{}, len(vs))
 	rpvals = make([]interface{}, len(vs))

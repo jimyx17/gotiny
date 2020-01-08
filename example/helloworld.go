@@ -14,7 +14,7 @@ func main() {
 	gotiny.Unmarshal(d, &ret1, &ret2)
 	fmt.Println(ret1 + string(ret2)) // print "hello world!"
 
-	enc := gotiny.NewEncoder(src1, src2)
+	enc, _ := gotiny.NewEncoder(src1, src2)
 	dec := gotiny.NewDecoder(ret1, ret2)
 
 	ret1, ret2 = "", []byte{3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 5, 6, 7, 44, 7, 5, 6, 4, 7}

@@ -13,6 +13,9 @@ type Decoder struct {
 	boolBit byte   // Next bool bit in buf boolpos
 	ptr     [MAXOBJREFS]unsafe.Pointer
 
+	intReferencePos uint16
+	intReferenceObj [MAXOBJREFS]uint64
+
 	engines []decEng // Decoders
 	length  int      // n of Decoders
 }
